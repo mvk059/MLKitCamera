@@ -1,3 +1,5 @@
 <resources>
     <string name="app_name">MLKitCamera</string>
+
+    <string name="camera_permission_is_denied">Camera Permission is denied</string>
 </resources>
