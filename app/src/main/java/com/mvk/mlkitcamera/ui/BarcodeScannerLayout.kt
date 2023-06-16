@@ -1,5 +1,6 @@
 package com.mvk.mlkitcamera.ui
 
+import android.graphics.RectF
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.Preview
 import androidx.camera.view.PreviewView
@@ -17,6 +18,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
@@ -60,9 +62,23 @@ fun BarcodeScannerLayout(
 
     Box(modifier = Modifier.fillMaxSize()) {
 
+        val width = remember { mutableStateOf(0) }
+        val height = remember { mutableStateOf(0) }
+
+
         AndroidView(
             factory = { previewWidget },
-            modifier = Modifier.fillMaxSize()
+            modifier = Modifier
+                .fillMaxSize()
+                .onGloballyPositioned { layoutCoordinates ->
+                    width.value = layoutCoordinates.size.width
+                    height.value = layoutCoordinates.size.height
+                }
+        )
+
+        BarcodeScannerBoundary(
+            width = width.value,
+            height = height.value,
         )
 
         if (isInitializing) {
