@@ -5,6 +5,7 @@ import android.graphics.RectF
 import android.os.Bundle
 import android.util.Log
 import android.view.View
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.ImageAnalysis
@@ -14,6 +15,7 @@ import androidx.camera.view.PreviewView
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.ViewModelProvider
 import com.mvk.mlkitcamera.R
+
 
 @androidx.annotation.OptIn(androidx.camera.core.ExperimentalGetImage::class)
 class CameraActivity : AppCompatActivity() {
@@ -34,22 +36,47 @@ class CameraActivity : AppCompatActivity() {
 
         previewView = findViewById(R.id.previewView)
         barcodeBoxView = findViewById(R.id.barcodeBoxView)
+
+        setupObservers()
     }
 
-    override fun onResume() {
-        super.onResume()
+    override fun onAttachedToWindow() {
+        super.onAttachedToWindow()
+
         startCamera() {
+
             viewModel.onCameraBoundaryReady(previewView.toRectF())
             viewModel.onBarcodeScanningAreaReady(previewView.toRectF())
             val scanningAreaRect = viewModel.calculateScanningRect(
                 minOf(previewView.width, previewView.height),
                 PointF(previewView.width * 0.5f, previewView.height * 0.5f)
             )
+            viewModel.onBarcodeScanningAreaReady(scanningAreaRect)
             barcodeBoxView.setScanningArea(scanningAreaRect)
         }
     }
 
-    private fun startCamera(onDone: () -> Unit) {
+    override fun onResume() {
+        super.onResume()
+
+    }
+
+    private fun setupObservers() {
+        viewModel.scanningResult.observe(this) {
+//            if (viewModel.freezeCameraPreview.value == true)
+            barcodeBoxView.setScanningResult(it)
+        }
+
+        viewModel.freezeCameraPreview.observe(this) {
+            if (it) {
+                showDialog()
+                startScanning(false)
+            }
+        }
+    }
+
+    private fun startCamera(onDone: () -> Unit = {}) {
+        barcodeBoxView.reset()
         val cameraProviderFuture = ProcessCameraProvider.getInstance(this)
         cameraProviderFuture.addListener(
             {
@@ -68,6 +95,17 @@ class CameraActivity : AppCompatActivity() {
             },
             ContextCompat.getMainExecutor(this)
         )
+    }
+
+    private fun showDialog() {
+        AlertDialog.Builder(this)
+            .setTitle("Closing application")
+            .setMessage("Are you sure you want to exit?")
+            .setPositiveButton("Yes") { dialog, which ->
+                viewModel.freezeCameraPreview(false)
+                startCamera()
+            }
+            .show()
     }
 
     private fun View.toRectF(): RectF {
